@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#203a32">
+<title>سبد خرید و ثبت سفارش | دکتر مصطفی خویی</title><link rel="stylesheet" href="assets/store.css">
+</head>
+<body>
+<div id="site-header"></div>
+<main class="store-page"><div class="wrap">
+  <div class="store-top"><div><div class="product-category">خرید شما</div><h1>سبد خرید</h1></div><a class="secondary-store-btn" href="products.html">ادامه خرید ←</a></div>
+  <div id="cart-content"></div>
+</div></main>
+<script src="assets/store.js"></script>
+<script>
+document.getElementById('site-header').innerHTML=storeHeader();initStoreHeader();
+const root=document.getElementById('cart-content');
+function cartItems(){return Object.entries(getCart()).map(([id,v])=>({p:PRODUCTS.find(x=>x.id===id),qty:Number(v.qty)||0})).filter(x=>x.p&&x.qty>0)}
+function renderCart(){
+ const items=cartItems();
+ if(!items.length){root.innerHTML='<div class="cart-list empty-cart">🛒<b>سبد خرید شما خالی است</b><p>برای افزودن کالا وارد فروشگاه شوید.</p><a class="primary-store-btn" href="products.html">رفتن به فروشگاه</a></div>';return}
+ const total=items.reduce((s,x)=>s+x.p.price*x.qty,0);
+ root.innerHTML=`<div class="checkout-steps"><span class="active">۱. سبد خرید</span><i></i><span>۲. اطلاعات و بازبینی</span><i></i><span>۳. ثبت سفارش</span></div>
+ <div class="cart-layout"><section class="cart-list"><h2>محصولات انتخاب‌شده (${items.length})</h2>${items.map(({p,qty})=>`<div class="cart-row"><div class="cart-thumb">${productVisual(p,'cart-product-image')}</div><div><h3>${p.name}</h3><small>قیمت واحد: ${money(p.price)}</small><br><button class="remove-item" data-remove="${p.id}" type="button">حذف محصول</button></div><div class="quantity-control"><button data-dec="${p.id}" type="button" aria-label="کاهش تعداد">−</button><output>${qty.toLocaleString('fa-IR')}</output><button data-inc="${p.id}" type="button" aria-label="افزایش تعداد">+</button></div><b class="store-price">${money(p.price*qty)}</b></div>`).join('')}</section>
+ <aside class="cart-summary"><h2>خلاصه سفارش</h2><div class="summary-line"><span>تعداد کالا</span><b>${items.reduce((s,x)=>s+x.qty,0).toLocaleString('fa-IR')}</b></div><div class="summary-line summary-total"><span>مبلغ کل</span><b>${money(total)}</b></div><button class="primary-store-btn full-btn" id="continue-checkout" type="button">ادامه و ثبت اطلاعات سفارش</button><p class="checkout-hint">تعداد هر محصول را همین‌جا تغییر دهید؛ سپس اطلاعات تحویل را وارد و سفارش را بازبینی کنید.</p></aside></div>`;
+ root.querySelectorAll('[data-inc]').forEach(b=>b.onclick=()=>{changeQty(b.dataset.inc,1);renderCart()});
+ root.querySelectorAll('[data-dec]').forEach(b=>b.onclick=()=>{changeQty(b.dataset.dec,-1);renderCart()});
+ root.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{removeItem(b.dataset.remove);renderCart()});
+ document.getElementById('continue-checkout').onclick=renderCheckout;
+}
+function renderCheckout(){
+ const items=cartItems();if(!items.length){renderCart();return}const total=items.reduce((s,x)=>s+x.p.price*x.qty,0);
+ root.innerHTML=`<div class="checkout-steps"><span class="done">۱. سبد خرید</span><i></i><span class="active">۲. اطلاعات و بازبینی</span><i></i><span>۳. ثبت سفارش</span></div><div class="checkout-layout"><section class="cart-summary"><h2>اطلاعات تحویل سفارش</h2><form class="checkout-form" id="checkout"><label>نام و نام خانوادگی<input name="name" required autocomplete="name" maxlength="100" placeholder="نام شما"></label><label>شماره تماس<input name="phone" required inputmode="tel" autocomplete="tel" pattern="[0-9۰-۹+()\\- ]{8,18}" maxlength="18" placeholder="شماره تماس"></label><label>نشانی تحویل<textarea name="address" required maxlength="500" autocomplete="street-address" placeholder="نشانی کامل"></textarea></label><label>توضیحات سفارش (اختیاری)<textarea name="note" maxlength="500" placeholder="توضیحات تکمیلی"></textarea></label><div class="form-actions"><button class="secondary-store-btn" id="back-cart" type="button">بازگشت به سبد</button><button class="primary-store-btn" type="submit">بازبینی نهایی سفارش</button></div></form></section><aside class="cart-summary"><h2>خلاصه مبلغ</h2>${items.map(x=>`<div class="summary-line"><span>${x.p.name} × ${x.qty.toLocaleString('fa-IR')}</span><b>${money(x.p.price*x.qty)}</b></div>`).join('')}<div class="summary-line summary-total"><span>مبلغ کل</span><b>${money(total)}</b></div></aside></div>`;
+ document.getElementById('back-cart').onclick=renderCart;
+ document.getElementById('checkout').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target);const customer={name:String(f.get('name')||'').trim(),phone:String(f.get('phone')||'').trim(),address:String(f.get('address')||'').trim(),note:String(f.get('note')||'').trim()};if(!customer.name||!customer.phone||!customer.address)return;renderReview(items,total,customer)};
+}
+function renderReview(items,total,customer){
+ root.innerHTML=`<div class="checkout-steps"><span class="done">۱. سبد خرید</span><i></i><span class="done">۲. اطلاعات و بازبینی</span><i></i><span class="active">۳. ثبت سفارش</span></div><div class="review-layout"><section class="cart-list"><h2>بازبینی نهایی محصولات</h2><div id="review-items"></div></section><aside class="cart-summary"><h2>اطلاعات مشتری</h2><div class="review-info"><b>نام و نام خانوادگی</b><span id="r-name"></span><b>شماره تماس</b><span id="r-phone"></span><b>نشانی تحویل</b><span id="r-address"></span><b>توضیحات</b><span id="r-note"></span></div><div class="summary-line summary-total"><span>مبلغ کل</span><b>${money(total)}</b></div><button class="primary-store-btn full-btn" id="confirm-order" type="button">تأیید و ثبت نهایی سفارش</button><button class="secondary-store-btn full-btn" id="edit-order" type="button">ویرایش اطلاعات</button><div class="notice payment-notice">پرداخت اینترنتی هنوز فعال نیست؛ برای دریافت وجه واقعی باید درگاه پرداخت امن به سایت متصل شود. این مرحله فقط سفارش را به‌صورت محلی در همین مرورگر ثبت می‌کند.</div></aside></div>`;
+ const ri=document.getElementById('review-items');ri.innerHTML=items.map(x=>`<div class="review-product"><span>${x.p.name} × ${x.qty.toLocaleString('fa-IR')}</span><b>${money(x.p.price*x.qty)}</b></div>`).join('');
+ for(const [id,val] of [['r-name',customer.name],['r-phone',customer.phone],['r-address',customer.address],['r-note',customer.note||'—']])document.getElementById(id).textContent=val;
+ document.getElementById('edit-order').onclick=renderCheckout;
+ document.getElementById('confirm-order').onclick=async()=>{const btn=document.getElementById('confirm-order');btn.disabled=true;btn.textContent='در حال ثبت سفارش...';try{const token=await getOrderCsrf();const r=await fetch('api/index.php?action=order',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':token},body:JSON.stringify({items:items.map(x=>({id:x.p.id,qty:x.qty})),customer})});const d=await r.json();if(!r.ok)throw new Error(d.error||'ثبت سفارش ناموفق بود');removeStored(CART_KEY);updateCartCount();root.innerHTML='<div class="cart-list empty-cart order-success"><div class="success-mark">✓</div><b>سفارش شما در سایت ثبت شد</b><p>کد پیگیری: <strong>'+d.order_code+'</strong></p><p>'+d.message+'</p><a class="primary-store-btn" href="products.html">بازگشت به فروشگاه</a></div>'}catch(err){btn.disabled=false;btn.textContent='تأیید و ثبت نهایی سفارش';root.insertAdjacentHTML('afterbegin','<div class="notice">'+String(err.message).replace(/[<>]/g,'')+'</div>')}};
+}
+renderCart();document.addEventListener('store:catalog-ready',renderCart);
+</script>
+</body></html>
